@@ -1,3 +1,4 @@
+require 'ruby-debug'
 require 'test/unit'
 require 'resque'
 require 'resque/plugins/lock'
@@ -8,6 +9,10 @@ class LockTest < Test::Unit::TestCase
   class Job
     extend Resque::Plugins::Lock
     @queue = :lock_test
+
+    def self.queue_timeout
+      2
+    end
 
     def self.perform
       raise "Woah woah woah, that wasn't supposed to happen"
@@ -36,6 +41,24 @@ class LockTest < Test::Unit::TestCase
     3.times { Resque.enqueue(Job) }
 
     assert_equal 1, Resque.redis.llen('queue:lock_test')
+  end
+
+  def test_ttl
+    Resque.enqueue(Job)
+    assert_equal 'true', Resque.redis.get(Job.lock)
+    assert_equal 'true', Resque.redis.get(Job.lock)
+
+    sleep (Job.queue_timeout + 1)
+
+    assert_nil Resque.redis.get(Job.lock)
+  end
+
+  def test_doesnt_update_ttl_when_not_acquiring_lock
+    Resque.enqueue(Job)
+    sleep 1
+    Resque.enqueue(Job)
+
+    assert_equal (Job.queue_timeout - 1), Resque.redis.ttl(Job.lock)
   end
 
   def test_failure_hook_removes_lock

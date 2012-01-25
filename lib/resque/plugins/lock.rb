@@ -41,6 +41,12 @@ module Resque
     # repo_id. Normally a job is locked using a combination of its
     # class name and arguments.
     module Lock
+      THREE_DAYS = 3 * 24 * 60 * 60
+
+      def queue_timeout
+        THREE_DAYS
+      end
+
       # Override in your job to control the lock key. It is
       # passed the same arguments as `perform`, that is, your job's
       # payload.
@@ -49,7 +55,22 @@ module Resque
       end
 
       def before_enqueue_lock(*args)
-        Resque.redis.setnx(lock(*args), true)
+        redis = Resque.redis
+        key = lock(*args)
+
+        old_ttl, acquired, _ = redis.multi do
+          redis.ttl key
+          redis.setnx key, true
+          redis.expire key, queue_timeout
+        end
+
+        if acquired == 1
+          true
+        else
+          # reset the ttl to what it was since we failed to acquire it
+          redis.expire key, old_ttl
+          false
+        end
       end
 
       def around_perform_lock(*args)
