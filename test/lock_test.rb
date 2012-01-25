@@ -85,9 +85,9 @@ class LockTest < Test::Unit::TestCase
   end
 
   def test_failure_hook_removes_lock
-    Job.before_enqueue_lock
+    Resque.enqueue(Job)
     assert Resque.redis.exists(Job.lock)
-    Job.on_failure_lock(RuntimeError.new)
+    Resque.reserve(:lock_test).fail(StandardError.new)
     assert !Resque.redis.exists(Job.lock)
   end
 
