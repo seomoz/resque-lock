@@ -14,14 +14,23 @@ class LockTest < Test::Unit::TestCase
       2
     end
 
+    def self.perform_timeout
+      1
+    end
+
+    def self.during_perform(&block)
+      @perform_hook = block
+    end
+
     def self.perform
-      raise "Woah woah woah, that wasn't supposed to happen"
+      @perform_hook.call
     end
   end
 
   def setup
     Resque.redis.del('queue:lock_test')
     Resque.redis.del(Job.lock)
+    Job.during_perform { }
   end
 
   def test_lint
@@ -59,6 +68,18 @@ class LockTest < Test::Unit::TestCase
     Resque.enqueue(Job)
 
     assert_equal (Job.queue_timeout - 1), Resque.redis.ttl(Job.lock)
+  end
+
+  def test_resets_ttl_during_perform
+    lock_ttl = nil
+    Job.during_perform do
+      lock_ttl = Resque.redis.ttl(Job.lock)
+    end
+
+    Resque.enqueue(Job)
+    Resque.reserve(:lock_test).perform
+
+    assert_equal Job.perform_timeout, lock_ttl
   end
 
   def test_failure_hook_removes_lock
