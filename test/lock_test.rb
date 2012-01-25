@@ -21,8 +21,8 @@ class LockTest < Test::Unit::TestCase
       @perform_hook = block
     end
 
-    def self.perform
-      @perform_hook.call
+    def self.perform(*args)
+      @perform_hook.call(*args)
     end
   end
 
@@ -94,5 +94,14 @@ class LockTest < Test::Unit::TestCase
     Resque.enqueue(Job)
     Resque.dequeue(Job)
     assert_nil Resque.redis.get(Job.lock)
+  end
+
+  def test_lock_normalizes_args
+    Resque.enqueue(Job, :symbolized => :hash)
+    Resque.reserve(:lock_test).perform
+
+    # ensure a new job can be enqueued
+    Resque.enqueue(Job, :symbolized => :hash)
+    assert_equal 1, Resque.redis.llen('queue:lock_test')
   end
 end

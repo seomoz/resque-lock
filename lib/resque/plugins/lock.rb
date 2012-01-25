@@ -56,7 +56,9 @@ module Resque
       # passed the same arguments as `perform`, that is, your job's
       # payload.
       def lock(*args)
-        "lock:#{name}-#{args.join('-')}"
+        # encode the args to normalize them (i.e. de-symbolize hash symbol keys, etc)
+        args = Resque.encode(args)
+        "lock:#{name}-#{args}"
       end
 
       def before_enqueue_lock(*args)
