@@ -45,6 +45,7 @@ class LockTest < Test::Unit::TestCase
     assert minor.to_i >= 17
     assert Resque::Plugin.respond_to?(:before_enqueue_hooks)
     assert Resque::Plugin.respond_to?(:before_dequeue_hooks)
+    assert Resque::Plugin.respond_to?(:failure_hooks)
   end
 
   def test_lock
