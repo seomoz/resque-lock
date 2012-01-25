@@ -78,6 +78,10 @@ module Resque
         end
       end
 
+      def before_dequeue_lock(*args)
+        Resque.redis.del(lock(*args))
+      end
+
       def around_perform_lock(*args)
         key = lock(*args)
         begin

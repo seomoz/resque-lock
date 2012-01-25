@@ -44,6 +44,7 @@ class LockTest < Test::Unit::TestCase
     assert_equal 1, major.to_i
     assert minor.to_i >= 17
     assert Resque::Plugin.respond_to?(:before_enqueue_hooks)
+    assert Resque::Plugin.respond_to?(:before_dequeue_hooks)
   end
 
   def test_lock
@@ -87,5 +88,11 @@ class LockTest < Test::Unit::TestCase
     assert Resque.redis.exists(Job.lock)
     Job.on_failure_lock(RuntimeError.new)
     assert !Resque.redis.exists(Job.lock)
+  end
+
+  def test_dequeue_hook_removes_lock
+    Resque.enqueue(Job)
+    Resque.dequeue(Job)
+    assert_nil Resque.redis.get(Job.lock)
   end
 end
