@@ -1,4 +1,3 @@
-require 'ruby-debug'
 require 'test/unit'
 require 'resque'
 require 'resque/plugins/lock'
