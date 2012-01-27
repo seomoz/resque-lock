@@ -42,14 +42,9 @@ module Resque
     # class name and arguments.
     module Lock
       THREE_DAYS = 3 * 24 * 60 * 60
-      THIRTY_MINUTES = 30 * 60 * 60
 
       def queue_timeout
         THREE_DAYS
-      end
-
-      def perform_timeout
-        THIRTY_MINUTES
       end
 
       # Override in your job to control the lock key. It is
@@ -84,16 +79,8 @@ module Resque
         Resque.redis.del(lock(*args))
       end
 
-      def around_perform_lock(*args)
-        key = lock(*args)
-        begin
-          Resque.redis.expire key, perform_timeout
-          yield
-        ensure
-          # Always clear the lock when we're done, even if there is an
-          # error.
-          Resque.redis.del(key)
-        end
+      def before_perform_lock(*args)
+        Resque.redis.del(lock(*args))
       end
 
       def on_failure_lock(error, *args)

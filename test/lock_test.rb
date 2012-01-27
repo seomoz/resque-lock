@@ -71,16 +71,17 @@ class LockTest < Test::Unit::TestCase
     assert_equal (Job.queue_timeout - 1), Resque.redis.ttl(Job.lock)
   end
 
-  def test_resets_ttl_during_perform
-    lock_ttl = nil
+  def test_unlocks_during_perform
+    lock_val = nil
     Job.during_perform do
-      lock_ttl = Resque.redis.ttl(Job.lock)
+      lock_val = Resque.redis.get(Job.lock)
     end
 
     Resque.enqueue(Job)
+    assert_equal 'true', Resque.redis.get(Job.lock)
     Resque.reserve(:lock_test).perform
-
-    assert_equal Job.perform_timeout, lock_ttl
+    assert_nil lock_val
+    assert_nil Resque.redis.get(Job.lock)
   end
 
   def test_failure_hook_removes_lock
