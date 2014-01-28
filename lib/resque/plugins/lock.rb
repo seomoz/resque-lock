@@ -66,7 +66,7 @@ module Resque
           redis.expire key, queue_timeout
         end
 
-        if acquired == 1
+        if acquired == 1 || acquired == true
           true
         else
           # reset the ttl to what it was since we failed to acquire it
